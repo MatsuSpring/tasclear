@@ -6,19 +6,17 @@ import datetime
 AppName = 'MyToDo(仮)'
 DatabaseName = 'main.db'
 
-try:
-    conn = sqlite3.connect(DatabaseName)
-    cur = conn.cursor()
-    cur.execute('''CREATE TABLE tasks(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                task_name STRING,
-                deadline INTEGER,
-                completed BOOL
-            )''')
-    conn.commit()
-    conn.close()
-except:
-    pass
+conn = sqlite3.connect(DatabaseName)
+cur = conn.cursor()
+cur.execute('''CREATE TABLE IF NOT EXISTS tasks(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_name STRING,
+            deadline INTEGER,
+            completed BOOL
+        )''')
+cur.execute('INSERT INTO tasks(task_name,deadline,completed) VALUES("英作文",1713157200,1)')
+conn.commit()
+conn.close()
 
 nowTime = int(time.time())
 
@@ -36,7 +34,7 @@ class taskField(ft.Row):
                 self.taskDeadline.hour,
                 self.taskDeadline.minute
         )
-        self.taskCompleted = properties[3]
+        self.taskCompleted = bool(properties[3])
 
         self.controls=[
             ft.Checkbox(value=self.taskCompleted, on_change=self.onCompletedChenged),
@@ -76,13 +74,13 @@ class taskField(ft.Row):
         self.dlgTaskDetails.open = True
         self.page.update()
         
-        
-
-        
 
 def main(page: ft.Page):
     conn = sqlite3.connect(DatabaseName)
     cur = conn.cursor()
+
+    def closeDatabase(e):
+        conn.close()
 
     page.title = AppName
     page.theme_mode = 'light'
@@ -98,11 +96,14 @@ def main(page: ft.Page):
         center_title=True,
         bgcolor=theme.color_scheme_seed
     )
+    
 
     cur.execute('SELECT * FROM tasks WHERE id=1')
+    row=cur.fetchall()
+    print(row[0])
     
-    tf = taskField(cur.fetchall()[0])
-
+    tf = taskField(row[0])
+    page.on_disconnect=closeDatabase
     page.add(tf)
     
 ft.app(main)
