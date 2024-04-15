@@ -17,7 +17,8 @@ cur.execute('''CREATE TABLE IF NOT EXISTS tasks(
 conn.commit()
 conn.close()
 
-nowTime = int(time.time())
+nowTime = datetime.datetime.now()
+nowTimeSecond = int(time.time())
 
 
 class Task(ft.Row):
@@ -44,7 +45,7 @@ class Task(ft.Row):
                         text=self.taskName+'\n',
                         style=ft.TextStyle(
                             size=23,
-                            color=ft.colors.RED_600 if self.taskDeadlineSecond-nowTime<86400 else None
+                            color=ft.colors.RED_600 if self.taskDeadlineSecond-nowTimeSecond<86400 else None
                         ),
                         on_click=self.onTaskTaped,
                     ),
@@ -106,7 +107,67 @@ class TaskList(ft.Column):
         for p in cu.fetchall():
             print(p)
             self.controls.append(Task(p, self))
+        co.close()
          
+class setTime(ft.Column):
+    def __init__(self):
+        super().__init__()
+        self.dpYear = ft.Dropdown(
+            width=207,
+            options=[ft.dropdown.Option(i) for i in range(nowTime.year, nowTime.year+3)],
+            value=nowTime.year,
+            text_size=18,
+            content_padding=15,
+            alignment=ft.alignment.center
+        )
+        self.dpMonth = ft.Dropdown(
+            width=85,
+            options=[ft.dropdown.Option(i) for i in range(1, 13)],
+            value=nowTime.month,
+            text_size=18,
+            content_padding=10,
+            alignment=ft.alignment.center
+        )
+        self.dpDay = ft.Dropdown(
+            width=85,
+            options=[ft.dropdown.Option(i) for i in range(1, 32)],
+            value=nowTime.day,
+            text_size=18,
+            content_padding=10,
+            alignment=ft.alignment.center
+        )
+        self.dpHour = ft.Dropdown(
+            width=85,
+            options=[ft.dropdown.Option(i) for i in range(0, 24)],
+            value=nowTime.hour,
+            text_size=18,
+            content_padding=10,
+            alignment=ft.alignment.center
+        )
+        self.dpMin = ft.Dropdown(
+            width=85,
+            options=[ft.dropdown.Option(i) for i in range(0, 60)],
+            value=nowTime.minute,
+            text_size=18,
+            content_padding=10,
+            alignment=ft.alignment.center
+        )
+    
+        self.controls=[
+            ft.Row(controls=[
+                self.dpYear, ft.Text('年', size=15)
+            ]),
+            ft.Row(controls=[
+                self.dpMonth, ft.Text('月', size=15), self.dpDay, ft.Text('日', size=15)
+            ]),
+            ft.Row(controls=[
+                self.dpHour, ft.Text('時', size=15), self.dpMin, ft.Text('分', size=15)
+            ])
+        ]
+    
+    def timeToSec(self):
+        return int(datetime.datetime(year=int(self.dpYear.value), month=int(self.dpMonth.value), day=int(self.dpDay.value), hour=int(self.dpHour.value), minute=int(self.dpMin.value)).timestamp())
+
 
 class TaskField(ft.Column):
     def __init__(self):
@@ -117,12 +178,59 @@ class TaskField(ft.Column):
             ft.Row(controls=[ft.ElevatedButton(
                 text='Add Task',
                 expand=1,
-                on_click=lambda e: print('Add clicked')
+                on_click=self.addTask
             )])
         ]
+    
+    def addTask(self, e):
+        self.taskNameField = ft.TextField(
+            label='タスク名',
+            text_size=20,
+            content_padding=15
+        )
+        self.setDeadline = setTime()
+        self.bsAddTask = ft.BottomSheet(
+            dismissible=True,
+            enable_drag=True,
+            show_drag_handle=True,
+            use_safe_area=True,
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[
+                        self.taskNameField,
+                        self.setDeadline,
+                        ft.Row(controls=[
+                            ft.ElevatedButton(text='キャンセル', on_click=self.closeBs), 
+                            ft.FilledButton(text='追加', on_click=self.addTaskToDatabase),
+                        ],
+                        alignment=ft.MainAxisAlignment.END)
+                    ],
+                    alignment=ft.VerticalAlignment.CENTER,
+                    tight=True,
+                ),
+                padding=30
+            ),
+            open=True,
+        )
+        self.page.overlay.append(self.bsAddTask)
+        self.page.update()
+    
+    def closeBs(self, e):
+        self.bsAddTask.open = False
+        self.page.update()
+    
+    def addTaskToDatabase(self, e):
+        print(self.taskNameField.value,self.setDeadline.timeToSec(),False)
+        co = sqlite3.connect(DatabaseName)
+        cu = co.cursor()
+        cu.execute("INSERT INTO tasks (task_name,deadline,completed) VALUES(?,?,?)",(self.taskNameField.value,self.setDeadline.timeToSec(),False))
+        co.commit()
+        co.close()
+        self.tl.sortByCompletedAndDeadline()
+        self.bsAddTask.open = False
+        self.page.update()
         
-    def build(self):
-        pass
+    
 
 
 
