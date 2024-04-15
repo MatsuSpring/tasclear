@@ -54,9 +54,16 @@ class taskField(ft.Row):
                         on_click=self.onTaskTaped,
                     ),
                 ],
-                no_wrap=True,
+                expand=1,
             ),
-            ft.Icon(ft.icons.EDIT_OUTLINED)
+            ft.Icon(
+                ft.icons.EDIT_OUTLINED,
+                tooltip='Edit Task',
+            ),
+            ft.Icon(
+                ft.icons.DELETE_OUTLINED,
+                tooltip='Dlete Task'
+            )
         ]
     
     def onCompletedChenged(self, e):
