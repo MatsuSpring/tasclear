@@ -56,12 +56,13 @@ class taskField(ft.Row):
                 ],
                 no_wrap=True,
             ),
+            ft.Icon(ft.icons.EDIT_OUTLINED)
         ]
     
     def onCompletedChenged(self, e):
         co = sqlite3.connect(DatabaseName)
         cu = co.cursor()
-        cu.execute('UPDATE tasks SET completed={} WHERE id={}'.format(e.control.value, self.taskId))
+        cu.execute('UPDATE tasks SET completed=? WHERE id=?', (e.control.value, self.taskId))
         co.commit()
         co.close()
     
