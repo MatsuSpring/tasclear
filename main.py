@@ -92,7 +92,6 @@ class Task(ft.Row):
 class TaskList(ft.Column):
     def __init__(self):
         super().__init__()
-        print('TaskList __init__')
         self.getFromDatabase()
     
     def sortByCompletedAndDeadline(self):
@@ -174,13 +173,25 @@ class TaskField(ft.Column):
         super().__init__()
         self.tl = TaskList()
         self.controls=[
+            ft.Row(
+                controls=[
+                    ft.FilledTonalButton(
+                        content=ft.Row(
+                            controls=[
+                                ft.Icon(ft.icons.ADD),
+                                ft.Text('Add Task', size=18)
+                            ],
+                            height=60,
+                            alignment=ft.MainAxisAlignment.CENTER,
+                        ),
+                        expand=1,
+                        on_click=self.addTask
+                    )
+                ]
+            ),
             self.tl,
-            ft.Row(controls=[ft.ElevatedButton(
-                text='Add Task',
-                expand=1,
-                on_click=self.addTask
-            )])
         ]
+        
     
     def addTask(self, e):
         self.taskNameField = ft.TextField(
@@ -229,8 +240,6 @@ class TaskField(ft.Column):
         self.tl.sortByCompletedAndDeadline()
         self.bsAddTask.open = False
         self.page.update()
-        
-    
 
 
 
@@ -249,6 +258,7 @@ def main(page: ft.Page):
         center_title=True,
         bgcolor=theme.color_scheme_seed
     )
+    page.scroll = ft.ScrollMode.AUTO
 
     tf = TaskField()
 
