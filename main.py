@@ -14,14 +14,14 @@ cur.execute('''CREATE TABLE IF NOT EXISTS tasks(
             deadline INTEGER,
             completed BOOL
         )''')
-cur.execute('INSERT INTO tasks(task_name,deadline,completed) VALUES("英作文",1713157200,1)')
 conn.commit()
 conn.close()
 
 nowTime = int(time.time())
 
-class taskField(ft.Row):
-    def __init__(self, properties):
+
+class Task(ft.Row):
+    def __init__(self, properties, lsitInstance):
         super().__init__()
         self.taskId = properties[0]
         self.taskName = properties[1]
@@ -56,15 +56,18 @@ class taskField(ft.Row):
                 ],
                 expand=1,
             ),
-            ft.Icon(
+            ft.IconButton(
                 ft.icons.EDIT_OUTLINED,
                 tooltip='Edit Task',
+                on_click=lambda e: print('Edit clicked')
             ),
-            ft.Icon(
+            ft.IconButton(
                 ft.icons.DELETE_OUTLINED,
-                tooltip='Dlete Task'
+                tooltip='Dlete Task',
+                on_click=lambda e: print('Delete clicked')
             )
         ]
+        self.lsitInstance = lsitInstance
     
     def onCompletedChenged(self, e):
         co = sqlite3.connect(DatabaseName)
@@ -72,6 +75,8 @@ class taskField(ft.Row):
         cu.execute('UPDATE tasks SET completed=? WHERE id=?', (e.control.value, self.taskId))
         co.commit()
         co.close()
+        self.lsitInstance.sortByCompletedAndDeadline()
+        
     
     def onTaskTaped(self, e):
         self.dlgTaskDetails = ft.AlertDialog(
@@ -81,15 +86,47 @@ class taskField(ft.Row):
         self.page.dialog = self.dlgTaskDetails
         self.dlgTaskDetails.open = True
         self.page.update()
+
+
+class TaskList(ft.Column):
+    def __init__(self):
+        super().__init__()
+        print('TaskList __init__')
+        self.getFromDatabase()
+    
+    def sortByCompletedAndDeadline(self):
+        self.controls = []
+        self.getFromDatabase()
+        self.update()
+    
+    def getFromDatabase(self):
+        co = sqlite3.connect(DatabaseName)
+        cu = co.cursor()
+        cu.execute('SELECT * FROM tasks ORDER BY completed, deadline')
+        for p in cu.fetchall():
+            print(p)
+            self.controls.append(Task(p, self))
+         
+
+class TaskField(ft.Column):
+    def __init__(self):
+        super().__init__()
+        self.tl = TaskList()
+        self.controls=[
+            self.tl,
+            ft.Row(controls=[ft.ElevatedButton(
+                text='Add Task',
+                expand=1,
+                on_click=lambda e: print('Add clicked')
+            )])
+        ]
         
+    def build(self):
+        pass
+
+
 
 def main(page: ft.Page):
-    conn = sqlite3.connect(DatabaseName)
-    cur = conn.cursor()
-
-    def closeDatabase(e):
-        conn.close()
-
     page.title = AppName
     page.theme_mode = 'light'
     theme = ft.Theme(
@@ -104,14 +141,9 @@ def main(page: ft.Page):
         center_title=True,
         bgcolor=theme.color_scheme_seed
     )
-    
 
-    cur.execute('SELECT * FROM tasks WHERE id=1')
-    row=cur.fetchall()
-    print(row[0])
-    
-    tf = taskField(row[0])
-    page.on_disconnect=closeDatabase
+    tf = TaskField()
+
     page.add(tf)
     
 ft.app(main)
