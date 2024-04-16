@@ -8,8 +8,13 @@ DatabaseName = 'main.db'
 
 conn = sqlite3.connect(DatabaseName)
 cur = conn.cursor()
+cur.execute('''CREATE TABLE IF NOT EXISTS lessons(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lesson_name STRING
+        )''')
 cur.execute('''CREATE TABLE IF NOT EXISTS tasks(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lesson_id INTEGER KEY,
             task_name STRING,
             deadline INTEGER,
             completed BOOL
@@ -20,101 +25,13 @@ conn.close()
 nowTime = datetime.datetime.now()
 nowTimeSecond = int(time.time())
 
-
-class Task(ft.Row):
-    def __init__(self, properties, lsitInstance):
-        super().__init__()
-        self.taskId = properties[0]
-        self.taskName = properties[1]
-        self.taskDeadlineSecond = properties[2]
-        self.taskDeadline = datetime.datetime.fromtimestamp(self.taskDeadlineSecond)
-        self.taskDeadlineText = '{:0=4}/{:0=2}/{:0=2} {:0=2}:{:0=2}'.format(
-                self.taskDeadline.year,
-                self.taskDeadline.month,
-                self.taskDeadline.day,
-                self.taskDeadline.hour,
-                self.taskDeadline.minute
-        )
-        self.taskCompleted = bool(properties[3])
-
-        self.controls=[
-            ft.Checkbox(value=self.taskCompleted, on_change=self.onCompletedChenged),
-            ft.Text(
-                spans=[
-                    ft.TextSpan(
-                        text=self.taskName+'\n',
-                        style=ft.TextStyle(
-                            size=23,
-                            color=ft.colors.RED_600 if self.taskDeadlineSecond-nowTimeSecond<86400 else None
-                        ),
-                        on_click=self.onTaskTaped,
-                    ),
-                    ft.TextSpan(
-                        text=self.taskDeadlineText,
-                        style=ft.TextStyle(color=ft.colors.GREY),
-                        on_click=self.onTaskTaped,
-                    ),
-                ],
-                expand=1,
-            ),
-            ft.IconButton(
-                ft.icons.EDIT_OUTLINED,
-                tooltip='Edit Task',
-                on_click=lambda e: print('Edit clicked')
-            ),
-            ft.IconButton(
-                ft.icons.DELETE_OUTLINED,
-                tooltip='Dlete Task',
-                on_click=lambda e: print('Delete clicked')
-            )
-        ]
-        self.lsitInstance = lsitInstance
-    
-    def onCompletedChenged(self, e):
-        co = sqlite3.connect(DatabaseName)
-        cu = co.cursor()
-        cu.execute('UPDATE tasks SET completed=? WHERE id=?', (e.control.value, self.taskId))
-        co.commit()
-        co.close()
-        self.lsitInstance.sortByCompletedAndDeadline()
-        
-    
-    def onTaskTaped(self, e):
-        self.dlgTaskDetails = ft.AlertDialog(
-            title=ft.Text(value=self.taskName),
-            content=ft.Text(value='提出期限  {}'.format(self.taskDeadlineText))
-        )
-        self.page.dialog = self.dlgTaskDetails
-        self.dlgTaskDetails.open = True
-        self.page.update()
-
-
-class TaskList(ft.Column):
-    def __init__(self):
-        super().__init__()
-        self.getFromDatabase()
-    
-    def sortByCompletedAndDeadline(self):
-        self.controls = []
-        self.getFromDatabase()
-        self.update()
-    
-    def getFromDatabase(self):
-        co = sqlite3.connect(DatabaseName)
-        cu = co.cursor()
-        cu.execute('SELECT * FROM tasks ORDER BY completed, deadline')
-        for p in cu.fetchall():
-            print(p)
-            self.controls.append(Task(p, self))
-        co.close()
-         
 class setTime(ft.Column):
-    def __init__(self):
+    def __init__(self, t):
         super().__init__()
         self.dpYear = ft.Dropdown(
             width=207,
-            options=[ft.dropdown.Option(i) for i in range(nowTime.year, nowTime.year+3)],
-            value=nowTime.year,
+            options=[ft.dropdown.Option(i) for i in range(t.year, t.year+3)],
+            value=t.year,
             text_size=18,
             content_padding=15,
             alignment=ft.alignment.center
@@ -122,7 +39,7 @@ class setTime(ft.Column):
         self.dpMonth = ft.Dropdown(
             width=85,
             options=[ft.dropdown.Option(i) for i in range(1, 13)],
-            value=nowTime.month,
+            value=t.month,
             text_size=18,
             content_padding=10,
             alignment=ft.alignment.center
@@ -130,7 +47,7 @@ class setTime(ft.Column):
         self.dpDay = ft.Dropdown(
             width=85,
             options=[ft.dropdown.Option(i) for i in range(1, 32)],
-            value=nowTime.day,
+            value=t.day,
             text_size=18,
             content_padding=10,
             alignment=ft.alignment.center
@@ -138,7 +55,7 @@ class setTime(ft.Column):
         self.dpHour = ft.Dropdown(
             width=85,
             options=[ft.dropdown.Option(i) for i in range(0, 24)],
-            value=nowTime.hour,
+            value=t.hour,
             text_size=18,
             content_padding=10,
             alignment=ft.alignment.center
@@ -146,13 +63,14 @@ class setTime(ft.Column):
         self.dpMin = ft.Dropdown(
             width=85,
             options=[ft.dropdown.Option(i) for i in range(0, 60)],
-            value=nowTime.minute,
+            value=t.minute,
             text_size=18,
             content_padding=10,
             alignment=ft.alignment.center
         )
     
         self.controls=[
+            ft.Text('提出期限', size=18),
             ft.Row(controls=[
                 self.dpYear, ft.Text('年', size=15)
             ]),
@@ -168,11 +86,184 @@ class setTime(ft.Column):
         return int(datetime.datetime(year=int(self.dpYear.value), month=int(self.dpMonth.value), day=int(self.dpDay.value), hour=int(self.dpHour.value), minute=int(self.dpMin.value)).timestamp())
 
 
-class TaskField(ft.Column):
-    def __init__(self):
+class Task(ft.Row):
+    def __init__(self, properties, lsitInstance):
         super().__init__()
-        self.tl = TaskList()
+        self.taskId = properties[0]
+        self.taskLessonId = properties[1]
+        self.taskName = properties[2]
+        self.taskDeadlineSecond = properties[3]
+        self.taskDeadline = datetime.datetime.fromtimestamp(self.taskDeadlineSecond)
+        self.taskDeadlineText = '{:0=4}/{:0=2}/{:0=2} {:0=2}:{:0=2}'.format(
+            self.taskDeadline.year,
+            self.taskDeadline.month,
+            self.taskDeadline.day,
+            self.taskDeadline.hour,
+            self.taskDeadline.minute
+        )
+        self.taskCompleted = bool(properties[4])
+
+        co = sqlite3.connect(DatabaseName)
+        cu = co.cursor()
+        cu.execute('SELECT lesson_name FROM lessons WHERE id=?',(self.taskLessonId,))
+        self.taskLessonName = cu.fetchone()[0]
+        print(self.taskLessonName)
+        co.commit()
+        co.close()
+
+
+        if self.taskCompleted:
+            self.taskTextStyle = ft.TextStyle(
+                size=23,
+                color=ft.colors.GREY,
+                decoration=ft.TextDecoration.LINE_THROUGH
+            )
+        elif self.taskDeadlineSecond-nowTimeSecond<86400:
+            self.taskTextStyle = ft.TextStyle(
+                size=23,
+                color=ft.colors.RED_600
+            )
+        else:
+            self.taskTextStyle = ft.TextStyle(size=23)
+        
+
         self.controls=[
+            ft.Checkbox(value=self.taskCompleted, on_change=self.onCompletedChenged),
+            ft.Text(
+                spans=[
+                    ft.TextSpan(
+                        text=self.taskName+'\n',
+                        style=self.taskTextStyle,
+                        on_click=self.onTaskTaped,
+                    ),
+                    ft.TextSpan(
+                        text=self.taskDeadlineText,
+                        style=ft.TextStyle(color=ft.colors.GREY),
+                        on_click=self.onTaskTaped,
+                    ),
+                ],
+                expand=1,
+            ),
+            ft.IconButton(
+                ft.icons.EDIT_OUTLINED,
+                tooltip='Edit Task',
+                on_click=self.editTaskClicked
+            ),
+            ft.IconButton(
+                ft.icons.DELETE_OUTLINED,
+                tooltip='Dlete Task',
+                on_click=self.deleteTaskClicked
+            )
+        ]
+        self.lsitInstance = lsitInstance
+    
+    def onCompletedChenged(self, e):
+        co = sqlite3.connect(DatabaseName)
+        cu = co.cursor()
+        cu.execute('UPDATE tasks SET completed=? WHERE id=?', (e.control.value, self.taskId))
+        co.commit()
+        co.close()
+        self.lsitInstance.sortByCompletedAndDeadline()
+        
+    def onTaskTaped(self, e):
+        self.dlgTaskDetails = ft.AlertDialog(
+            title=ft.Text(value=self.taskName),
+            content=ft.Column(controls=[
+                ft.Text(value='科目 : '+self.taskLessonName, size=20),
+                ft.Text(value='提出期限  {}'.format(self.taskDeadlineText))
+            ],
+            tight=True)
+
+        )
+        self.page.dialog = self.dlgTaskDetails
+        self.dlgTaskDetails.open = True
+        self.page.update()
+    
+    def editTaskClicked(self, e):
+        self.taskNameField = ft.TextField(
+            label='タスク名',
+            value=self.taskName,
+            text_size=20,
+            content_padding=15
+        )
+        self.setDeadline = setTime(self.taskDeadline)
+        self.bsEditTask = ft.BottomSheet(
+            dismissible=True,
+            enable_drag=True,
+            show_drag_handle=True,
+            use_safe_area=True,
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Text('タスクを編集', size=30),
+                        self.taskNameField,
+                        self.setDeadline,
+                        ft.Row(controls=[
+                            ft.ElevatedButton(text='キャンセル', on_click=self.closeBs), 
+                            ft.FilledButton(text='変更', on_click=self.editTaskDatabase),
+                        ],
+                        alignment=ft.MainAxisAlignment.END)
+                    ],
+                    alignment=ft.VerticalAlignment.CENTER,
+                    tight=True,
+                ),
+                padding=30
+            ),
+            open=True,
+        )
+        self.page.overlay.append(self.bsEditTask)
+        self.page.update()
+    
+    def closeBs(self, e):
+        self.bsEditTask.open = False
+        self.bsEditTask.update()
+    
+    def editTaskDatabase(self, e):
+        co = sqlite3.connect(DatabaseName)
+        cu = co.cursor()
+        cu.execute("UPDATE tasks SET task_name=?,deadline=?,completed=? WHERE id=?",(self.taskNameField.value,self.setDeadline.timeToSec(),self.taskCompleted,self.taskId))
+        co.commit()
+        co.close()
+        self.lsitInstance.sortByCompletedAndDeadline()
+        self.closeBs(e)
+
+    def deleteTaskClicked(self, e):
+        co = sqlite3.connect(DatabaseName)
+        cu = co.cursor()
+        cu.execute('DELETE FROM tasks WHERE id=?', (self.taskId,))
+        co.commit()
+        co.close()
+        self.lsitInstance.sortByCompletedAndDeadline()
+
+
+class TaskList(ft.Column):
+    def __init__(self, lesson_id):
+        super().__init__()
+        self.lesson_id = lesson_id
+        self.getFromDatabase()
+    
+    def sortByCompletedAndDeadline(self):
+        self.controls = []
+        self.getFromDatabase()
+        self.update()
+    
+    def getFromDatabase(self):
+        co = sqlite3.connect(DatabaseName)
+        cu = co.cursor()
+        cu.execute('SELECT * FROM tasks WHERE lesson_id=? ORDER BY completed, deadline', (self.lesson_id,))
+        for p in cu.fetchall():
+            print(p)
+            self.controls.append(Task(p, self))
+        co.close()
+
+
+class TaskField(ft.Column):
+    def __init__(self, lesson_id):
+        super().__init__()
+        self.lesson_id = lesson_id
+        self.tl = TaskList(self.lesson_id)
+        self.controls=[
+            ft.Container(height=15),
             ft.Row(
                 controls=[
                     ft.FilledTonalButton(
@@ -191,15 +282,14 @@ class TaskField(ft.Column):
             ),
             self.tl,
         ]
-        
-    
+
     def addTask(self, e):
         self.taskNameField = ft.TextField(
             label='タスク名',
             text_size=20,
             content_padding=15
         )
-        self.setDeadline = setTime()
+        self.setDeadline = setTime(nowTime)
         self.bsAddTask = ft.BottomSheet(
             dismissible=True,
             enable_drag=True,
@@ -208,6 +298,7 @@ class TaskField(ft.Column):
             content=ft.Container(
                 content=ft.Column(
                     controls=[
+                        ft.Text('タスクを追加', size=30),
                         self.taskNameField,
                         self.setDeadline,
                         ft.Row(controls=[
@@ -228,18 +319,41 @@ class TaskField(ft.Column):
     
     def closeBs(self, e):
         self.bsAddTask.open = False
-        self.page.update()
+        self.bsAddTask.update()
     
     def addTaskToDatabase(self, e):
-        print(self.taskNameField.value,self.setDeadline.timeToSec(),False)
         co = sqlite3.connect(DatabaseName)
         cu = co.cursor()
-        cu.execute("INSERT INTO tasks (task_name,deadline,completed) VALUES(?,?,?)",(self.taskNameField.value,self.setDeadline.timeToSec(),False))
+        cu.execute("INSERT INTO tasks (lesson_id,task_name,deadline,completed) VALUES(?,?,?,?)",(self.lesson_id,self.taskNameField.value,self.setDeadline.timeToSec(),False))
         co.commit()
         co.close()
         self.tl.sortByCompletedAndDeadline()
-        self.bsAddTask.open = False
-        self.page.update()
+        self.closeBs(e)
+
+
+class taskFieldTabs(ft.Tabs):
+    def __init__(self):
+        super().__init__()
+        self.selected_index=0
+        self.animation_duration=300
+        self.scrollable=True
+    
+    def build(self):
+        co = sqlite3.connect(DatabaseName)
+        cu = co.cursor()
+        cu.execute("SELECT * FROM lessons ORDER BY id ASC")
+        self.lessons = cu.fetchall()
+        co.commit()
+        co.close()
+
+        for lesson in self.lessons:
+            self.tabs.append(
+                ft.Tab(
+                    text=lesson[1],
+                    content=TaskField(lesson[0])
+                )
+            )
+
 
 
 
@@ -247,7 +361,7 @@ def main(page: ft.Page):
     page.title = AppName
     page.theme_mode = 'light'
     theme = ft.Theme(
-        color_scheme_seed=ft.colors.GREEN_500
+        color_scheme_seed=ft.colors.GREEN_400
     )
     page.theme = theme
     page.dark_theme = theme
@@ -260,8 +374,8 @@ def main(page: ft.Page):
     )
     page.scroll = ft.ScrollMode.AUTO
 
-    tf = TaskField()
+    tft = taskFieldTabs()
 
-    page.add(tf)
+    page.add(tft)
     
 ft.app(main)
