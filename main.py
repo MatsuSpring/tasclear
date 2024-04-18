@@ -348,15 +348,69 @@ class taskFieldTabs(ft.Tabs):
         co.commit()
         co.close()
 
+        self.tabs = []
         for lesson in self.lessons:
             self.tabs.append(
                 ft.Tab(
                     text=lesson[1],
                     content=TaskField(lesson[0])
-                    # text='test',
-                    # content=(ft.Text('てすと！'))
                 )
             )
+        self.tabs.append(
+            ft.Tab(
+                tab_content=ft.IconButton(
+                    icon=ft.icons.ADD,
+                    on_click=self.addLesson
+                    )
+                )
+            )
+    
+    def addLesson(self, e):
+        self.LessonNameField = ft.TextField(
+            label='授業名',
+            text_size=20,
+            content_padding=15
+        )
+        self.bsAddLesson = ft.BottomSheet(
+            dismissible=True,
+            enable_drag=True,
+            show_drag_handle=True,
+            use_safe_area=True,
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Text('授業を追加', size=30),
+                        self.LessonNameField,
+                        ft.Row(controls=[
+                            ft.ElevatedButton(text='キャンセル', on_click=self.closeBs), 
+                            ft.FilledButton(text='追加', on_click=self.addLessonToDatabase),
+                        ],
+                        alignment=ft.MainAxisAlignment.END)
+                    ],
+                    alignment=ft.VerticalAlignment.CENTER,
+                    tight=True,
+                ),
+                padding=30
+            ),
+            open=True,
+        )
+        self.page.overlay.append(self.bsAddLesson)
+        self.page.update()
+    
+    def closeBs(self, e):
+        self.bsAddLesson.open = False
+        self.bsAddLesson.update()
+    
+    def addLessonToDatabase(self, e):
+        co = sqlite3.connect(DatabaseName)
+        cu = co.cursor()
+        cu.execute("INSERT INTO lessons (lesson_name) VALUES(?)",(self.LessonNameField.value,))
+        co.commit()
+        co.close()
+        self.build()
+        self.selected_index=len(self.tabs)-2
+        self.update()
+        self.closeBs(e)
 
 
 
