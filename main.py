@@ -240,14 +240,9 @@ class TaskList(ft.Column):
     def __init__(self, lesson_id):
         super().__init__()
         self.lesson_id = lesson_id
-        self.getFromDatabase()
-    
-    def sortByCompletedAndDeadline(self):
-        self.controls = []
-        self.getFromDatabase()
-        self.update()
-    
-    def getFromDatabase(self):
+
+    def build(self):
+        self.controls=[]
         co = sqlite3.connect(DatabaseName)
         cu = co.cursor()
         cu.execute('SELECT * FROM tasks WHERE lesson_id=? ORDER BY completed, deadline', (self.lesson_id,))
@@ -256,6 +251,11 @@ class TaskList(ft.Column):
             self.controls.append(Task(p, self))
         co.close()
 
+    def sortByCompletedAndDeadline(self):
+        self.build()
+        self.update()
+    
+    
 
 class TaskField(ft.Column):
     def __init__(self, lesson_id):
@@ -282,6 +282,7 @@ class TaskField(ft.Column):
             ),
             self.tl,
         ]
+        self.scroll=ft.ScrollMode.AUTO
 
     def addTask(self, e):
         self.taskNameField = ft.TextField(
@@ -337,6 +338,7 @@ class taskFieldTabs(ft.Tabs):
         self.selected_index=0
         self.animation_duration=300
         self.scrollable=True
+        self.expand=1
     
     def build(self):
         co = sqlite3.connect(DatabaseName)
@@ -351,6 +353,8 @@ class taskFieldTabs(ft.Tabs):
                 ft.Tab(
                     text=lesson[1],
                     content=TaskField(lesson[0])
+                    # text='test',
+                    # content=(ft.Text('てすと！'))
                 )
             )
 
@@ -372,7 +376,6 @@ def main(page: ft.Page):
         center_title=True,
         bgcolor=theme.color_scheme_seed
     )
-    page.scroll = ft.ScrollMode.AUTO
 
     tft = taskFieldTabs()
 
