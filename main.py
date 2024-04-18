@@ -111,7 +111,6 @@ class Task(ft.Row):
         co.commit()
         co.close()
 
-
         if self.taskCompleted:
             self.taskTextStyle = ft.TextStyle(
                 size=23,
@@ -163,7 +162,7 @@ class Task(ft.Row):
         cu.execute('UPDATE tasks SET completed=? WHERE id=?', (e.control.value, self.taskId))
         co.commit()
         co.close()
-        self.lsitInstance.sortByCompletedAndDeadline()
+        self.lsitInstance.rebuild()
         
     def onTaskTaped(self, e):
         self.dlgTaskDetails = ft.AlertDialog(
@@ -224,7 +223,7 @@ class Task(ft.Row):
         cu.execute("UPDATE tasks SET task_name=?,deadline=?,completed=? WHERE id=?",(self.taskNameField.value,self.setDeadline.timeToSec(),self.taskCompleted,self.taskId))
         co.commit()
         co.close()
-        self.lsitInstance.sortByCompletedAndDeadline()
+        self.lsitInstance.rebuild()
         self.closeBs(e)
 
     def deleteTaskClicked(self, e):
@@ -233,7 +232,7 @@ class Task(ft.Row):
         cu.execute('DELETE FROM tasks WHERE id=?', (self.taskId,))
         co.commit()
         co.close()
-        self.lsitInstance.sortByCompletedAndDeadline()
+        self.lsitInstance.rebuild()
 
 
 class TaskList(ft.Column):
@@ -251,14 +250,14 @@ class TaskList(ft.Column):
             self.controls.append(Task(p, self))
         co.close()
 
-    def sortByCompletedAndDeadline(self):
+    def rebuild(self):
         self.build()
         self.update()
     
     
 
 class TaskField(ft.Column):
-    def __init__(self, lesson_id):
+    def __init__(self, lesson_id, tabsInstance):
         super().__init__()
         self.lesson_id = lesson_id
         self.tl = TaskList(self.lesson_id)
@@ -277,12 +276,19 @@ class TaskField(ft.Column):
                         ),
                         expand=1,
                         on_click=self.addTask
+                    ),
+                    ft.IconButton(
+                        icon=ft.icons.DELETE_ROUNDED,
+                        tooltip='Delete Lesson',
+                        on_click=self.confirmDeleteLesson
                     )
                 ]
             ),
             self.tl,
         ]
         self.scroll=ft.ScrollMode.AUTO
+
+        self.tabsInstance = tabsInstance
 
     def addTask(self, e):
         self.taskNameField = ft.TextField(
@@ -328,8 +334,36 @@ class TaskField(ft.Column):
         cu.execute("INSERT INTO tasks (lesson_id,task_name,deadline,completed) VALUES(?,?,?,?)",(self.lesson_id,self.taskNameField.value,self.setDeadline.timeToSec(),False))
         co.commit()
         co.close()
-        self.tl.sortByCompletedAndDeadline()
+        self.tl.rebuild()
         self.closeBs(e)
+    
+    def confirmDeleteLesson(self, e):
+        self.dlgConfirmDeleteLesson = ft.AlertDialog(
+            title=ft.Text('確認'),
+            content=ft.Text('この授業を削除します。よろしいですか？'),
+            actions=[
+                ft.ElevatedButton(text='キャンセル', on_click=self.closeDlg), 
+                ft.FilledButton(text='OK', on_click=self.deleteLesson),
+            ],
+        )
+        self.page.dialog = self.dlgConfirmDeleteLesson
+        self.dlgConfirmDeleteLesson.open=True
+        self.page.update()
+
+    def deleteLesson(self, e):
+        co = sqlite3.connect(DatabaseName)
+        cu = co.cursor()
+        cu.execute("DELETE FROM lessons WHERE id=?",(self.lesson_id,))
+        cu.execute("DELETE FROM tasks WHERE lesson_id=?",(self.lesson_id,))
+        co.commit()
+        co.close()
+        self.page.dialog.open = False
+        self.page.update()
+        self.tabsInstance.rebuild()
+    
+    def closeDlg(self, e):
+        self.page.dialog.open = False
+        self.page.update()
 
 
 class taskFieldTabs(ft.Tabs):
@@ -353,17 +387,34 @@ class taskFieldTabs(ft.Tabs):
             self.tabs.append(
                 ft.Tab(
                     text=lesson[1],
-                    content=TaskField(lesson[0])
+                    content=TaskField(lesson[0], self)
                 )
             )
+
+        if len(self.tabs)==0:
+            contentAddButton = ft.ElevatedButton(
+                content=ft.Row([
+                    ft.Icon(ft.icons.ADD),
+                    ft.Text('授業を追加')
+                ]),
+                on_click=self.addLesson
+            )
+        else:
+            contentAddButton = ft.IconButton(
+                icon=ft.icons.ADD,
+                on_click=self.addLesson
+            )
+
         self.tabs.append(
             ft.Tab(
-                tab_content=ft.IconButton(
-                    icon=ft.icons.ADD,
-                    on_click=self.addLesson
-                    )
+                tab_content=contentAddButton
                 )
             )
+            
+    
+    def rebuild(self):
+        self.build()
+        self.update()
     
     def addLesson(self, e):
         self.LessonNameField = ft.TextField(
@@ -408,6 +459,7 @@ class taskFieldTabs(ft.Tabs):
         co.commit()
         co.close()
         self.build()
+        # 追加した授業のタブを選択
         self.selected_index=len(self.tabs)-2
         self.update()
         self.closeBs(e)
@@ -424,8 +476,8 @@ def main(page: ft.Page):
     page.theme = theme
     page.dark_theme = theme
     page.appbar = ft.AppBar(
-        leading=ft.Icon(ft.icons.FACT_CHECK_ROUNDED),
-        leading_width=40,
+        leading=ft.Icon(ft.icons.CHECK_CIRCLE_OUTLINE_ROUNDED),
+        leading_width=70,
         title=ft.Text(AppName),
         center_title=True,
         bgcolor=theme.color_scheme_seed
@@ -434,5 +486,6 @@ def main(page: ft.Page):
     tft = taskFieldTabs()
 
     page.add(tft)
+
     
 ft.app(main)
