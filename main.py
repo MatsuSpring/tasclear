@@ -3,7 +3,7 @@ import sqlite3
 import time
 import datetime
 
-AppName = 'MyToDo(仮)'
+AppName = 'TasClear'
 DatabaseName = 'main.db'
 
 conn = sqlite3.connect(DatabaseName)
@@ -466,12 +466,11 @@ class taskFieldTabs(ft.Tabs):
 
 
 
-
 def main(page: ft.Page):
     page.title = AppName
     page.theme_mode = 'light'
     theme = ft.Theme(
-        color_scheme_seed=ft.colors.GREEN_400
+        color_scheme_seed=ft.colors.GREEN_400,
     )
     page.theme = theme
     page.dark_theme = theme
