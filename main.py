@@ -34,7 +34,6 @@ class setTime(ft.Column):
             value=t.year,
             text_size=18,
             content_padding=15,
-            alignment=ft.alignment.center
         )
         self.dpMonth = ft.Dropdown(
             width=85,
@@ -42,7 +41,6 @@ class setTime(ft.Column):
             value=t.month,
             text_size=18,
             content_padding=10,
-            alignment=ft.alignment.center
         )
         self.dpDay = ft.Dropdown(
             width=85,
@@ -50,7 +48,6 @@ class setTime(ft.Column):
             value=t.day,
             text_size=18,
             content_padding=10,
-            alignment=ft.alignment.center
         )
         self.dpHour = ft.Dropdown(
             width=85,
@@ -58,7 +55,6 @@ class setTime(ft.Column):
             value=t.hour,
             text_size=18,
             content_padding=10,
-            alignment=ft.alignment.center
         )
         self.dpMin = ft.Dropdown(
             width=85,
@@ -66,7 +62,6 @@ class setTime(ft.Column):
             value=t.minute,
             text_size=18,
             content_padding=10,
-            alignment=ft.alignment.center
         )
     
         self.controls=[
@@ -114,13 +109,13 @@ class Task(ft.Row):
         if self.taskCompleted:
             self.taskTextStyle = ft.TextStyle(
                 size=23,
-                color=ft.colors.GREY,
+                color=ft.Colors.GREY,
                 decoration=ft.TextDecoration.LINE_THROUGH
             )
         elif self.taskDeadlineSecond-nowTimeSecond<86400:
             self.taskTextStyle = ft.TextStyle(
                 size=23,
-                color=ft.colors.RED_600
+                color=ft.Colors.RED_600
             )
         else:
             self.taskTextStyle = ft.TextStyle(size=23)
@@ -137,19 +132,19 @@ class Task(ft.Row):
                     ),
                     ft.TextSpan(
                         text=self.taskDeadlineText,
-                        style=ft.TextStyle(color=ft.colors.GREY),
+                        style=ft.TextStyle(color=ft.Colors.GREY),
                         on_click=self.onTaskTaped,
                     ),
                 ],
                 expand=1,
             ),
             ft.IconButton(
-                ft.icons.EDIT_OUTLINED,
+                ft.Icons.EDIT_OUTLINED,
                 tooltip='Edit Task',
                 on_click=self.editTaskClicked
             ),
             ft.IconButton(
-                ft.icons.DELETE_OUTLINED,
+                ft.Icons.DELETE_OUTLINED,
                 tooltip='Dlete Task',
                 on_click=self.deleteTaskClicked
             )
@@ -268,7 +263,7 @@ class TaskField(ft.Column):
                     ft.FilledTonalButton(
                         content=ft.Row(
                             controls=[
-                                ft.Icon(ft.icons.ADD),
+                                ft.Icon(ft.Icons.ADD),
                                 ft.Text('Add Task', size=18)
                             ],
                             height=60,
@@ -278,7 +273,7 @@ class TaskField(ft.Column):
                         on_click=self.addTask
                     ),
                     ft.IconButton(
-                        icon=ft.icons.DELETE_ROUNDED,
+                        icon=ft.Icons.DELETE_ROUNDED,
                         tooltip='Delete Lesson',
                         on_click=self.confirmDeleteLesson
                     )
@@ -394,14 +389,14 @@ class taskFieldTabs(ft.Tabs):
         if len(self.tabs)==0:
             contentAddButton = ft.ElevatedButton(
                 content=ft.Row([
-                    ft.Icon(ft.icons.ADD),
+                    ft.Icon(ft.Icons.ADD),
                     ft.Text('授業を追加')
                 ]),
                 on_click=self.addLesson
             )
         else:
             contentAddButton = ft.IconButton(
-                icon=ft.icons.ADD,
+                icon=ft.Icons.ADD,
                 on_click=self.addLesson
             )
 
@@ -470,12 +465,12 @@ def main(page: ft.Page):
     page.title = AppName
     page.theme_mode = 'light'
     theme = ft.Theme(
-        color_scheme_seed=ft.colors.GREEN_400,
+        color_scheme_seed=ft.Colors.GREEN_400,
     )
     page.theme = theme
     page.dark_theme = theme
     page.appbar = ft.AppBar(
-        leading=ft.Icon(ft.icons.CHECK_CIRCLE_OUTLINE_ROUNDED),
+        leading=ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE_ROUNDED),
         leading_width=70,
         title=ft.Text(AppName),
         center_title=True,
