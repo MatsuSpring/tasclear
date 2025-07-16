@@ -1,16 +1,17 @@
 import flet as ft
 import datetime
-import database as db
+import storage as db
 from controls.task_list import TaskList
 from controls.set_time import setTime
 
 nowTime = datetime.datetime.now()
 
 class TaskField(ft.Column):
-    def __init__(self, lesson_id, tabsInstance):
+    def __init__(self, page: ft.Page, lesson_id, tabsInstance):
         super().__init__()
+        self.page = page
         self.lesson_id = lesson_id
-        self.tl = TaskList(self.lesson_id)
+        self.tl = TaskList(self.page, self.lesson_id)
         self.controls=[
             ft.Container(height=15),
             ft.Row(
@@ -79,7 +80,7 @@ class TaskField(ft.Column):
         self.bsAddTask.update()
     
     def addTaskToDatabase(self, e):
-        db.add_task(self.lesson_id, self.taskNameField.value, self.setDeadline.timeToSec())
+        db.add_task(self.page, self.lesson_id, self.taskNameField.value, self.setDeadline.timeToSec())
         self.tl.rebuild()
         self.closeBs(e)
     
@@ -97,7 +98,7 @@ class TaskField(ft.Column):
         self.page.update()
 
     def deleteLesson(self, e):
-        db.delete_lesson(self.lesson_id)
+        db.delete_lesson(self.page, self.lesson_id)
         self.page.dialog.open = False
         self.page.update()
         self.tabsInstance.rebuild()
