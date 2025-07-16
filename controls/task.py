@@ -1,14 +1,15 @@
 import flet as ft
 import datetime
-import database as db
+import storage as db
 from controls.set_time import setTime
 
 nowTime = datetime.datetime.now()
 nowTimeSecond = int(nowTime.timestamp())
 
 class Task(ft.Row):
-    def __init__(self, properties, lsitInstance):
+    def __init__(self, page: ft.Page, properties, lsitInstance):
         super().__init__()
+        self.page = page
         self.taskId = properties[0]
         self.taskLessonId = properties[1]
         self.taskName = properties[2]
@@ -23,7 +24,7 @@ class Task(ft.Row):
         )
         self.taskCompleted = bool(properties[4])
 
-        self.taskLessonName = db.get_lesson_name(self.taskLessonId)
+        self.taskLessonName = db.get_lesson_name(self.page, self.taskLessonId)
 
         if self.taskCompleted:
             self.taskTextStyle = ft.TextStyle(
@@ -71,7 +72,7 @@ class Task(ft.Row):
         self.lsitInstance = lsitInstance
     
     def onCompletedChenged(self, e):
-        db.update_task_completion(self.taskId, e.control.value)
+        db.update_task_completion(self.page, self.taskId, e.control.value)
         self.lsitInstance.rebuild()
         
     def onTaskTaped(self, e):
@@ -128,10 +129,10 @@ class Task(ft.Row):
         self.bsEditTask.update()
     
     def editTaskDatabase(self, e):
-        db.update_task(self.taskId, self.taskNameField.value, self.setDeadline.timeToSec(), self.taskCompleted)
+        db.update_task(self.page, self.taskId, self.taskNameField.value, self.setDeadline.timeToSec(), self.taskCompleted)
         self.lsitInstance.rebuild()
         self.closeBs(e)
 
     def deleteTaskClicked(self, e):
-        db.delete_task(self.taskId)
+        db.delete_task(self.page, self.taskId)
         self.lsitInstance.rebuild()

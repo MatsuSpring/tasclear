@@ -1,24 +1,25 @@
 import flet as ft
-import database as db
+import storage as db
 from controls.task_field import TaskField
 
 class taskFieldTabs(ft.Tabs):
-    def __init__(self):
+    def __init__(self, page: ft.Page):
         super().__init__()
+        self.page = page
         self.selected_index=0
         self.animation_duration=300
         self.scrollable=True
         self.expand=1
     
     def build(self):
-        self.lessons = db.get_all_lessons()
+        self.lessons = db.get_all_lessons(self.page)
 
         self.tabs = []
         for lesson in self.lessons:
             self.tabs.append(
                 ft.Tab(
                     text=lesson[1],
-                    content=TaskField(lesson[0], self)
+                    content=TaskField(self.page, lesson[0], self)
                 )
             )
 
@@ -84,7 +85,7 @@ class taskFieldTabs(ft.Tabs):
         self.bsAddLesson.update()
     
     def addLessonToDatabase(self, e):
-        db.add_lesson(self.LessonNameField.value)
+        db.add_lesson(self.page, self.LessonNameField.value)
         self.build()
         # 追加した授業のタブを選択
         self.selected_index=len(self.tabs)-2

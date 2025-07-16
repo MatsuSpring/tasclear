@@ -1,10 +1,8 @@
 import flet as ft
-import database as db
+import storage as db
 from controls.task_field_tabs import taskFieldTabs
 
 AppName = 'TasClear'
-
-db.init_db()
 
 def main(page: ft.Page):
     page.title = AppName
@@ -22,7 +20,9 @@ def main(page: ft.Page):
         bgcolor=theme.color_scheme_seed
     )
 
-    tft = taskFieldTabs()
+    db.init_storage(page)
+
+    tft = taskFieldTabs(page)
 
     page.add(tft)
 
