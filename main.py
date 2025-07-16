@@ -1,26 +1,11 @@
 import flet as ft
-import sqlite3
 import time
 import datetime
+import database as db
 
 AppName = 'TasClear'
-DatabaseName = 'main.db'
 
-conn = sqlite3.connect(DatabaseName)
-cur = conn.cursor()
-cur.execute('''CREATE TABLE IF NOT EXISTS lessons(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            lesson_name STRING
-        )''')
-cur.execute('''CREATE TABLE IF NOT EXISTS tasks(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            lesson_id INTEGER KEY,
-            task_name STRING,
-            deadline INTEGER,
-            completed BOOL
-        )''')
-conn.commit()
-conn.close()
+db.init_db()
 
 nowTime = datetime.datetime.now()
 nowTimeSecond = int(time.time())
@@ -98,13 +83,7 @@ class Task(ft.Row):
         )
         self.taskCompleted = bool(properties[4])
 
-        co = sqlite3.connect(DatabaseName)
-        cu = co.cursor()
-        cu.execute('SELECT lesson_name FROM lessons WHERE id=?',(self.taskLessonId,))
-        self.taskLessonName = cu.fetchone()[0]
-        print(self.taskLessonName)
-        co.commit()
-        co.close()
+        self.taskLessonName = db.get_lesson_name(self.taskLessonId)
 
         if self.taskCompleted:
             self.taskTextStyle = ft.TextStyle(
@@ -152,11 +131,7 @@ class Task(ft.Row):
         self.lsitInstance = lsitInstance
     
     def onCompletedChenged(self, e):
-        co = sqlite3.connect(DatabaseName)
-        cu = co.cursor()
-        cu.execute('UPDATE tasks SET completed=? WHERE id=?', (e.control.value, self.taskId))
-        co.commit()
-        co.close()
+        db.update_task_completion(self.taskId, e.control.value)
         self.lsitInstance.rebuild()
         
     def onTaskTaped(self, e):
@@ -213,20 +188,12 @@ class Task(ft.Row):
         self.bsEditTask.update()
     
     def editTaskDatabase(self, e):
-        co = sqlite3.connect(DatabaseName)
-        cu = co.cursor()
-        cu.execute("UPDATE tasks SET task_name=?,deadline=?,completed=? WHERE id=?",(self.taskNameField.value,self.setDeadline.timeToSec(),self.taskCompleted,self.taskId))
-        co.commit()
-        co.close()
+        db.update_task(self.taskId, self.taskNameField.value, self.setDeadline.timeToSec(), self.taskCompleted)
         self.lsitInstance.rebuild()
         self.closeBs(e)
 
     def deleteTaskClicked(self, e):
-        co = sqlite3.connect(DatabaseName)
-        cu = co.cursor()
-        cu.execute('DELETE FROM tasks WHERE id=?', (self.taskId,))
-        co.commit()
-        co.close()
+        db.delete_task(self.taskId)
         self.lsitInstance.rebuild()
 
 
@@ -237,13 +204,9 @@ class TaskList(ft.Column):
 
     def build(self):
         self.controls=[]
-        co = sqlite3.connect(DatabaseName)
-        cu = co.cursor()
-        cu.execute('SELECT * FROM tasks WHERE lesson_id=? ORDER BY completed, deadline', (self.lesson_id,))
-        for p in cu.fetchall():
+        for p in db.get_tasks_by_lesson(self.lesson_id):
             print(p)
             self.controls.append(Task(p, self))
-        co.close()
 
     def rebuild(self):
         self.build()
@@ -324,11 +287,7 @@ class TaskField(ft.Column):
         self.bsAddTask.update()
     
     def addTaskToDatabase(self, e):
-        co = sqlite3.connect(DatabaseName)
-        cu = co.cursor()
-        cu.execute("INSERT INTO tasks (lesson_id,task_name,deadline,completed) VALUES(?,?,?,?)",(self.lesson_id,self.taskNameField.value,self.setDeadline.timeToSec(),False))
-        co.commit()
-        co.close()
+        db.add_task(self.lesson_id, self.taskNameField.value, self.setDeadline.timeToSec())
         self.tl.rebuild()
         self.closeBs(e)
     
@@ -346,12 +305,7 @@ class TaskField(ft.Column):
         self.page.update()
 
     def deleteLesson(self, e):
-        co = sqlite3.connect(DatabaseName)
-        cu = co.cursor()
-        cu.execute("DELETE FROM lessons WHERE id=?",(self.lesson_id,))
-        cu.execute("DELETE FROM tasks WHERE lesson_id=?",(self.lesson_id,))
-        co.commit()
-        co.close()
+        db.delete_lesson(self.lesson_id)
         self.page.dialog.open = False
         self.page.update()
         self.tabsInstance.rebuild()
@@ -370,12 +324,7 @@ class taskFieldTabs(ft.Tabs):
         self.expand=1
     
     def build(self):
-        co = sqlite3.connect(DatabaseName)
-        cu = co.cursor()
-        cu.execute("SELECT * FROM lessons ORDER BY id ASC")
-        self.lessons = cu.fetchall()
-        co.commit()
-        co.close()
+        self.lessons = db.get_all_lessons()
 
         self.tabs = []
         for lesson in self.lessons:
@@ -448,11 +397,7 @@ class taskFieldTabs(ft.Tabs):
         self.bsAddLesson.update()
     
     def addLessonToDatabase(self, e):
-        co = sqlite3.connect(DatabaseName)
-        cu = co.cursor()
-        cu.execute("INSERT INTO lessons (lesson_name) VALUES(?)",(self.LessonNameField.value,))
-        co.commit()
-        co.close()
+        db.add_lesson(self.LessonNameField.value)
         self.build()
         # 追加した授業のタブを選択
         self.selected_index=len(self.tabs)-2
